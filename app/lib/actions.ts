@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
+import { PrismaClient } from "@prisma/client";
 
 const FormSchema = z.object({
   id: z.string(),
@@ -90,11 +91,16 @@ export async function updateInvoice(
   const amountInCents = amount * 100;
 
   try {
-    await sql`
-        UPDATE invoices
-        SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
-        WHERE id = ${id}
-      `;
+    const client = new PrismaClient();
+
+    await client.invoices.update({
+      where: { id: id },
+      data: {
+        customer_id: customerId,
+        amount: amountInCents,
+        status: status,
+      },
+    });
   } catch (error) {
     return { message: "Database Error: Failed to Update Invoice." };
   }

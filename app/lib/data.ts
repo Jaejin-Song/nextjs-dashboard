@@ -8,6 +8,7 @@ import {
   Revenue,
 } from "./definitions";
 import { formatCurrency } from "./utils";
+import { PrismaClient } from "@prisma/client";
 
 export async function fetchRevenue() {
   try {
@@ -91,6 +92,18 @@ export async function fetchFilteredInvoices(
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   try {
+    const client = new PrismaClient();
+    // 아래 같은 where절은 어차피 sql로 작성해야됨
+    const _invoices = await client.invoices.findMany({
+      relationLoadStrategy: "join",
+      select: {
+        id: true,
+        amount: true,
+        date: true,
+        status: true,
+      },
+    });
+
     const invoices = await sql<InvoicesTable>`
       SELECT
         invoices.id,
@@ -111,6 +124,8 @@ export async function fetchFilteredInvoices(
       ORDER BY invoices.date DESC
       LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
     `;
+
+    console.log("invoices.rows :>> ", invoices.rows);
 
     return invoices.rows;
   } catch (error) {
@@ -158,7 +173,6 @@ export async function fetchInvoiceById(id: string) {
       amount: invoice.amount / 100,
     }));
 
-    console.log(invoice);
     return invoice[0];
   } catch (error) {
     console.error("Database Error:", error);
